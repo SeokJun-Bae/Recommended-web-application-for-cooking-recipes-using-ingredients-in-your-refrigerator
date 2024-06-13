@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>게시판</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* 페이지 네비게이션을 가운데 정렬하고 버튼을 페이지 번호 양 옆에 배치합니다 */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .pagination button {
+      margin: 0 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>게시판</h1>
+    <form id="postForm" class="post-form">
+      <label for="title">제목:</label>
+      <input type="text" id="title" name="title" required>
+      <label for="content">내용:</label>
+      <textarea id="content" name="content" required></textarea>
+      <button type="submit">글쓰기</button>
+    </form>
+    <table id="postsTable">
+      <thead>
+        <tr>
+          <th>번호</th>
+          <th>제목</th>
+          <th>작성자</th>
+          <th>작성일</th>
+        </tr>
+      </thead>
+      <tbody id="postsList">
+        <!-- 게시글 목록이 여기에 추가됩니다 -->
+      </tbody>
+    </table>
+    <div class="pagination" id="paginationControls">
+      <button id="prevPage">&lt;</button>
+      <span id="currentPage">1</span>
+      <button id="nextPage">&gt;</button>
+    </div>
+    <div id="postDetail" style="display: none;">
+      <h3 id="postTitle"></h3>
+      <p id="postContent"></p>
+      <button id="editButton">수정</button>
+      <button id="deleteButton">삭제</button>
+      <button id="backButton">목록으로 돌아가기</button>
+    </div>
+  </div>
+  <nav class="navbar">
+    <ul>
+      <li><a href="index.html">홈</a></li>
+      <li><a href="board.html">게시판</a></li>
+      <li><a href="introduce.html">웹 페이지 소개</a></li>
+      <li><a href="logout.html">로그아웃</a></li>
+    </ul>
+  </nav>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const postForm = document.getElementById('postForm');
+      const postsList = document.getElementById('postsList');
+      const postDetail = document.getElementById('postDetail');
+      const postTitle = document.getElementById('postTitle');
+      const postContent = document.getElementById('postContent');
+      const backButton = document.getElementById('backButton');
+      const paginationControls = document.getElementById('paginationControls');
+      const currentPage = document.getElementById('currentPage');
+      const prevPage = document.getElementById('prevPage');
+      const nextPage = document.getElementById('nextPage');
+      const editButton = document.getElementById('editButton');
+      const deleteButton = document.getElementById('deleteButton');
+      let page = 1;
+      let currentPostId = null;
+
+      // 게시글 목록 로드
+      const loadPosts = async () => {
+        try {
+          const response = await fetch(`http://localhost:5000/api/posts?page=${page}`);
+          const { posts, totalPages } = await response.json();
+          postsList.innerHTML = '';
+          posts.forEach((post, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${index + 1 + (page - 1) * 10}</td>
+              <td><a href="#" class="post-link" data-id="${post._id}">${post.title}</a></td>
+              <td>${post.author}</td>
+              <td>${new Date(post.createdAt).toLocaleDateString()}</td>
+            `;
+            postsList.appendChild(row);
+          });
+
+          currentPage.textContent = page;
+          prevPage.disabled = page === 1;
+          nextPage.disabled = page === totalPages;
+        } catch (error) {
+          console.error('Error loading posts:', error);
+        }
+      };
+
+      // 게시글 상세 보기
+      const showPost = async (id) => {
+        try {
+          const response = await fetch(`http://localhost:5000/api/posts/${id}`);
+          const post = await response.json();
+          postTitle.textContent = post.title;
+          postContent.textContent = post.content;
+          postDetail.style.display = 'block';
+          postsList.style.display = 'none';
+          postForm.style.display = 'none';
+          paginationControls.style.display = 'none';
+          currentPostId = id;
+        } catch (error) {
+          console.error('Error loading post:', error);
+        }
+      };
+
+      // 목록으로 돌아가기
+      backButton.addEventListener('click', () => {
+        postDetail.style.display = 'none';
+        postsList.style.display = 'table-row-group';
+        postForm.style.display = 'block';
+        paginationControls.style.display = 'flex';
+        loadPosts();
+      });
+
+      // 게시글 생성
+      postForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const formData = new FormData(postForm);
+        const title = formData.get('title');
+        const content = formData.get('content');
+        const token = localStorage.getItem('token');
+
+        try {
+          await fetch('http://localhost:5000/api/posts', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ title, content })
+          });
+          postForm.reset();
+          loadPosts();
+        } catch (error) {
+          console.error('Error creating post:', error);
+        }
+      });
+
+      // 게시글 수정
+      editButton.addEventListener('click', async () => {
+        const title = prompt('새 제목을 입력하세요:', postTitle.textContent);
+        const content = prompt('새 내용을 입력하세요:', postContent.textContent);
+        const token = localStorage.getItem('token');
+        if (title && content) {
+          try {
+            await fetch(`http://localhost:5000/api/posts/${currentPostId}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ title, content })
+            });
+            showPost(currentPostId);
+          } catch (error) {
+            console.error('Error updating post:', error);
+          }
+        }
+      });
+
+      // 게시글 삭제
+      deleteButton.addEventListener('click', async () => {
+        const token = localStorage.getItem('token');
+        if (confirm('정말로 이 게시글을 삭제하시겠습니까?')) {
+          try {
+            await fetch(`http://localhost:5000/api/posts/${currentPostId}`, {
+              method: 'DELETE',
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            backButton.click();
+          } catch (error) {
+            console.error('Error deleting post:', error);
+            alert('게시글 삭제에 실패했습니다.');
+          }
+        }
+      });
+
+      // 페이지 네비게이션
+      prevPage.addEventListener('click', () => {
+        if (page > 1) {
+          page--;
+          loadPosts();
+        }
+      });
+
+      nextPage.addEventListener('click', () => {
+        page++;
+        loadPosts();
+      });
+
+      // 게시글 상세 보기 이벤트 리스너
+      postsList.addEventListener('click', (event) => {
+        if (event.target.classList.contains('post-link')) {
+          event.preventDefault();
+          const id = event.target.getAttribute('data-id');
+          showPost(id);
+        }
+      });
+
+      loadPosts();
+    });
+  </script>
+</body>
+</html>

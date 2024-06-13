@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>로그아웃</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>로그아웃</h1>
+    <button id="logoutButton">로그아웃</button>
+  </div>
+  <nav class="navbar">
+    <ul>
+      <li><a href="index.html">홈</a></li>
+      <li><a href="board.html">게시판</a></li>
+      <li><a href="introduce.html">웹 페이지 소개</a></li>
+      <li><a href="logout.html">로그아웃</a></li>
+    </ul>
+  </nav>
+  <script>
+    document.getElementById('logoutButton').addEventListener('click', () => {
+      localStorage.removeItem('token'); // JWT 토큰 삭제
+      window.location.href = 'login.html'; // 로그인 페이지로 리디렉션
+    });
+  </script>
+</body>
+</html>

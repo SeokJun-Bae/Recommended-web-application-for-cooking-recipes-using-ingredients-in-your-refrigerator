@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>요리 레시피 추천 앱</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>요리 레시피 추천 앱</h1>
+    <form id="recommendForm">
+      <input type="text" id="ingredient" placeholder="재료를 입력하세요">
+      <button type="submit">추천 받기</button>
+    </form>
+    <div id="recommendations">
+      <div id="menuSection">
+        <h2>추천 메뉴</h2>
+        <ol id="menuList"></ol>
+      </div>
+      <div id="recipeDetail" style="display: none;">
+        <h3 id="recipeName"></h3>
+        <p id="ingredients"></p>
+        <p id="instructions"></p>
+        <button id="backButton">추천 메뉴로 돌아가기</button>
+      </div>
+    </div>
+  </div>
+  <nav class="navbar">
+    <ul>
+      <li><a href="index.html">홈</a></li>
+      <li><a href="board.html">게시판</a></li>
+      <li><a href="introduce.html">웹 페이지 소개</a></li>
+      <li><a href="logout.html">로그아웃</a></li>
+    </ul>
+  </nav>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const recommendForm = document.getElementById('recommendForm');
+      const ingredientInput = document.getElementById('ingredient');
+      const menuList = document.getElementById('menuList');
+      const recipeDetail = document.getElementById('recipeDetail');
+      const recipeName = document.getElementById('recipeName');
+      const ingredients = document.getElementById('ingredients');
+      const instructions = document.getElementById('instructions');
+      const backButton = document.getElementById('backButton');
+      const menuSection = document.getElementById('menuSection');
+
+      recommendForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const ingredient = ingredientInput.value.trim();
+        if (!ingredient) {
+          alert('재료를 입력하세요.');
+          return;
+        }
+        try {
+          const response = await fetch(`http://localhost:5000/recommend?ingredient=${ingredient}`);
+          const recipes = await response.json();
+          menuList.innerHTML = '';
+          if (recipes.length === 0) {
+            const listItem = document.createElement('li');
+            listItem.textContent = '추천 메뉴가 없습니다';
+            menuList.appendChild(listItem);
+          } else {
+            recipes.forEach(recipe => {
+              const li = document.createElement('li');
+              const a = document.createElement('a');
+              a.href = '#';
+              a.textContent = recipe.name;
+              a.addEventListener('click', () => {
+                showRecipeDetail(recipe);
+              });
+              li.appendChild(a);
+              menuList.appendChild(li);
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching recommendations:', error);
+        }
+      });
+
+      backButton.addEventListener('click', () => {
+        recipeDetail.style.display = 'none';
+        menuSection.style.display = 'block';
+      });
+
+      const showRecipeDetail = (recipe) => {
+        recipeName.textContent = recipe.name;
+        ingredients.textContent = `재료: ${recipe.ingredients.join(', ')}`;
+        instructions.textContent = `조리법: ${recipe.instructions}`;
+        recipeDetail.style.display = 'block';
+        menuSection.style.display = 'none';
+      };
+    });
+  </script>
+</body>
+</html>
